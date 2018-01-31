@@ -1,0 +1,90 @@
+---
+title: "Microbiome Analysis"
+output: html_notebook
+author: "Joseph Edwards"
+---
+
+## Introduction
+In this R notebook, we will be conducting an example analysis of microbiome data from the roots of plants. This is not a comprehensive analysis, but the workflow here gives a barebones structure for a typical analysis of amplicon data. If the reader has any questions or concerns, please contact Joseph Edwards at edwards@ucdavis.edu or Chistian Santos at cmsantosm@ucdavis.edu.
+
+## Required libraries
+Here we will be loading in the necessary libraries for the example analysis. The tidyverse contains the libraries ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, and forcats. The tidyMB package contains a bunch of useful wrapper functions to make microbiome analysis streamlined with a tidy workflow. The vegan package contains many tools essential for community (and microbial) ecology.
+```{r}
+library(tidyverse)
+library(tidyMB)
+library(vegan)
+library(reshape2)
+```
+
+## Load in the data
+Here we will load in the OTU table, the mapping file (metadata), and the taxonomy table. The OTU table and mapping file are tab delimited files generated freshly for this analysis. The taxonomy table is a pre-compiled table that is in a ready-to-load R data structure. The OTU table was constructed using closed reference clustering. Therefore there was no need to assign taxonomies to the OTUs.
+```{r}
+otu_table <- read.table("../../DATA/example_otu_table.tsv", sep = "\t", header = T, row.names = 1)
+map_table <- read_tsv("../../DATA/plant_root_map.tsv")
+tax_table <- read_rds("../../DATA/gg_otus_tax.rds")
+```
+
+## Filtering the data
+Here is where the user will clean up the data. This includes removing plastid and mitochondria OTUs from the dataset, filtering out low-depth samples, and removing OTUs which are not regularly present in the samples. We will remove OTUs which are not present in at least 5% of the samples.
+
+### Assemble data into a 'tidy' format
+A good rule of thumb in any analysis is to convert data into a tidy format. To be tidy, the dataset should have one observation per row and the additional columns should reflect information about that observation.
+```{r}
+map_table <- map_table[match(colnames(otu_table), map_table$SampleID),]
+mb_experiment <- melt(cbind(map_table, t(otu_table)), id.vars = names(map_table)) %>% 
+  inner_join(tax_table, by = "variable")
+```
+
+### Identify and remove plastid and mitochondria OTUs and define a column for sequencing depth
+```{r}
+mb_experiment <- mb_experiment %>% 
+  filter(Family != "mitochondria") %>% 
+  filter(Class != "Chloroplast") %>% 
+  group_by(SampleID) %>% 
+  mutate(Depth = sum(value))
+```
+
+### Remove OTUs which are not present in at least 5% of the samples
+
+Let us first add a few columns to our data. Here we will add a column for the prevalence of each OTU, the relative abundance of each OTU (per mille), and a column specifying whether the column will be kept after filtering based upon a 5% prevalence threshold.
+```{r}
+mb_experiment <- mb_experiment %>% 
+  group_by(variable) %>% 
+  mutate(prev = sum(value > 0) / n()) %>% 
+  mutate(RA = (value / Depth) * 1000) %>% 
+  mutate(Status = ifelse(prev >= 0.05, "Keep", "Discard"))
+```
+
+Next we will make a graph plotting mean relative abundance vs. prevalence. The points represent each OTU and are colored by whether they will be kept after filtering.
+```{r}
+prev_plot <- mb_experiment %>% 
+  group_by(variable, prev, Status) %>% 
+  summarise(mean_ra = mean(RA)) %>% 
+  ggplot(aes(x = mean_ra, y = prev, color = Status)) +
+  geom_point(alpha = 0.1) +
+  scale_x_log10() +
+  scale_color_manual(values = c("red", "black")) +
+  labs(x = "Mean Relative Abundance (log10)", y = "Prevalence") +
+  theme_minimal() +
+  theme(text = element_text(size = 12), legend.position = "none")
+
+prev_plot
+```
+
+Finally we will remove all the low prevalence OTUs
+```{r}
+mb_experiment <- mb_experiment %>% 
+  filter(Status == "Keep")
+```
+
+
+## Beta Diversity
+```{r}
+exp_pc <- tidy_pcoa(mb_experiment %>% mutate(logRA = log2(RA + 1)), value = "logRA")
+```
+
+
+
+
+
+

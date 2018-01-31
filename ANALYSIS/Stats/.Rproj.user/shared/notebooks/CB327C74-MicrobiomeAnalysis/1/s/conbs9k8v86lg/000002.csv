@@ -1,0 +1,4 @@
+"0","mb_experiment <- melt(cbind(map_table, t(otu_table)), id.vars = names(map_table)) %>% 
+  inner_join(tax_table, by = ""variable"")
+"
+"2","Column `variable` joining factor and character vector, coercing into character vector"

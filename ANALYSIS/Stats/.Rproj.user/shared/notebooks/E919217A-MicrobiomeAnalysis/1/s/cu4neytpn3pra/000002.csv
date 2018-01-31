@@ -1,0 +1,5 @@
+"0","```r
+otu_table <- read_tsv()
+map_table <- read_tsv()
+tax_table <- read_rds()
+```"

@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1517348421960.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1711209282",
+    "id" : "C3C00765",
+    "lastKnownWriteTime" : 1517406652,
+    "last_content_update" : 1517406652395,
+    "path" : "~/RMB/BioProtocol/ANALYSIS/Stats/MicrobiomeAnalysis.rmd",
+    "project_path" : "MicrobiomeAnalysis.rmd",
+    "properties" : {
+        "chunk_output_type" : "inline",
+        "cursorPosition" : "77,0",
+        "scrollLine" : "72"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

@@ -1,0 +1,8 @@
+"0","exp_pc <- tidy_pcoa(mb_experiment %>% mutate(logRA = log2(RA + 1)), value = ""logRA"")
+"
+"2","Gathering metadata
+"
+"2","Removing the column variable from the metadata.
+"
+"2","Converting to wide table.
+"
