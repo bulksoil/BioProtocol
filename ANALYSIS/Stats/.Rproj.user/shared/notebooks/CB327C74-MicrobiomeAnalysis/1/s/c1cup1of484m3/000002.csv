@@ -1,0 +1,5 @@
+"0","mb_experiment <- mb_experiment %>% "
+"0","  filter(Family != ""mitochondria"") %>% "
+"0","  filter(Class != ""Chloroplast"") %>% "
+"0","  group_by(SampleID) %>% "
+"0","  mutate(Depth = sum(value))"

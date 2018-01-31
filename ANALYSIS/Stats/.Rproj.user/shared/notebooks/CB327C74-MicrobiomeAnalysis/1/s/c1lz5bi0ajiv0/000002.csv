@@ -1,0 +1,5 @@
+"0","mb_experiment <- mb_experiment %>% "
+"0","  group_by(variable) %>% "
+"0","  mutate(prev = sum(value > 0) / n()) %>% "
+"0","  mutate(RA = (value / Depth) * 1000) %>% "
+"0","  mutate(Status = ifelse(prev >= 0.05, ""Keep"", ""Discard""))"

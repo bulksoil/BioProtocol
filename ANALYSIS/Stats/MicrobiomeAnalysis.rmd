@@ -7,6 +7,9 @@ author: "Joseph Edwards"
 ## Introduction
 In this R notebook, we will be conducting an example analysis of microbiome data from the roots of plants. This is not a comprehensive analysis, but the workflow here gives a barebones structure for a typical analysis of amplicon data. If the reader has any questions or concerns, please contact Joseph Edwards at edwards@ucdavis.edu or Chistian Santos at cmsantosm@ucdavis.edu.
 
+## Background on the data
+This data is derived from Santos-Medellín et al. 2017. In this paper, the authors inspect the microbiomes of various rice genotypes when exposed to drought in different soils. The OTU table for this particular tutorial was generated only from the well-watered plants in this study.
+
 ## Required libraries
 Here we will be loading in the necessary libraries for the example analysis. The tidyverse contains the libraries ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, and forcats. The tidyMB package contains a bunch of useful wrapper functions to make microbiome analysis streamlined with a tidy workflow. The vegan package contains many tools essential for community (and microbial) ecology.
 ```{r}
@@ -20,7 +23,7 @@ library(reshape2)
 Here we will load in the OTU table, the mapping file (metadata), and the taxonomy table. The OTU table and mapping file are tab delimited files generated freshly for this analysis. The taxonomy table is a pre-compiled table that is in a ready-to-load R data structure. The OTU table was constructed using closed reference clustering. Therefore there was no need to assign taxonomies to the OTUs.
 ```{r}
 otu_table <- read.table("../../DATA/example_otu_table.tsv", sep = "\t", header = T, row.names = 1)
-map_table <- read_tsv("../../DATA/plant_root_map.tsv")
+map_table <- read_tsv("../../DATA/example_map.tsv")
 tax_table <- read_rds("../../DATA/gg_otus_tax.rds")
 ```
 
@@ -45,7 +48,6 @@ mb_experiment <- mb_experiment %>%
 ```
 
 ### Remove OTUs which are not present in at least 5% of the samples
-
 Let us first add a few columns to our data. Here we will add a column for the prevalence of each OTU, the relative abundance of each OTU (per mille), and a column specifying whether the column will be kept after filtering based upon a 5% prevalence threshold.
 ```{r}
 mb_experiment <- mb_experiment %>% 
@@ -80,11 +82,120 @@ mb_experiment <- mb_experiment %>%
 
 ## Beta Diversity
 ```{r}
-exp_pc <- tidy_pcoa(mb_experiment %>% mutate(logRA = log2(RA + 1)), value = "logRA")
+exp_pc <- tidy_pcoa(mb_experiment %>% 
+                      mutate(logRA = log2(RA + 1)) %>% 
+                      select(SampleID, Tub, Compartment, Soil, Genotype, variable, RA, logRA), value = "logRA")
 ```
 
+```{r}
+pc_plot <- exp_pc$axes %>% 
+  ggplot(aes(MDS1, MDS2, color = Compartment)) +
+  geom_point(size = 5) +
+  labs(x = paste("PCo1 (", round(exp_pc$eigen_vals[1], 3)*100, "%)", sep = ""),
+       y = paste("PCo2 (", round(exp_pc$eigen_vals[2], 3)*100, "%)", sep = "")) +
+  theme_minimal() +
+  scale_color_manual(values = c(c("#E41A1C", "#377EB8", "#984EA3"))) +
+  theme(text = element_text(size = 12), legend.position = "none")
 
+pc_plot
+```
 
+## Alpha Diversity
+```{r}
+mb_a_div <- mb_experiment %>% 
+  group_by(SampleID, Compartment, Soil) %>% 
+  mutate(RA = RA /1000) %>% 
+  filter(value > 0) %>% 
+  summarise(Richness = sum(value > 0), Shannon = -sum(log(RA) * RA))
 
+adiv_plot <- mb_a_div %>% 
+  ungroup() %>%
+  mutate(Compartment = fct_relevel(Compartment, "BulkSoil", "Rhizosphere", "Endosphere")) %>% 
+  gather(metric, value, -c(SampleID, Compartment, Soil)) %>% 
+  ggplot(aes(Compartment, value, fill = Compartment)) +
+  geom_boxplot() +
+  facet_wrap(~metric, scales = "free") +
+  theme_minimal() +
+  labs(x = "", y = "Value") +
+  scale_fill_manual(values = c("#E41A1C", "#984EA3", "#377EB8")) +
+  theme(text = element_text(size = 12), 
+        legend.position = "none", 
+        axis.text.x = element_text(angle = 30, hjust = 1))
 
+adiv_plot
+```
+
+## Phylum Plots
+```{r}
+phy_abundance <- mb_experiment %>% 
+  group_by(SampleID, Phylum, SampleID, Compartment, Soil) %>% 
+  summarise(phy_total = sum(RA)) %>% 
+  group_by(Phylum) %>% 
+  nest() %>% 
+  mutate(total = map_dbl(data, ~sum(.x$phy_total))) %>% 
+  top_n(10, total) %>% 
+  select(-total) %>% 
+  unnest(data) %>% 
+  group_by(Phylum, Compartment, Soil) %>% 
+  summarise(mean_phy = mean(phy_total)) %>% 
+  ungroup() %>% 
+  mutate(Compartment = fct_relevel(Compartment, "BulkSoil", "Rhizosphere", "Endosphere"))
+
+phy_abundance %>% 
+  ggplot(aes(x = Compartment, mean_phy, fill = Phylum)) +
+  geom_bar(stat = "identity") +
+  scale_fill_brewer(palette = "Spectral") +
+  facet_grid(.~Soil) +
+  theme_minimal() +
+  labs(x = "", y = "Relative Abundance (‰)") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1), text = element_text(size = 12))
+```
+
+## Differential abundance analysis
+Here we will compare the microbiomes of the rhizosphere and endosphere to that of the bulk soil to see which OTUs are differentially abundant and describing the witnessed differences between the sample types. 
+```{r}
+library(DESeq2)
+library(broom)
+library(biobroom)
+DESeq2_example <- mb_experiment %>% 
+  select(Compartment, variable, value, SampleID) %>% 
+  group_by(variable) %>% 
+  filter(sum(value > 0) / n() > 0.1) %>% 
+  mutate(Compartment = relevel(factor(Compartment), ref = "BulkSoil")) %>% 
+  mutate(group = Compartment) %>% 
+  group_by(1) %>% 
+  nest() %>% 
+  mutate(DGEL = map(data, ~tidyDGEL(., value = "value", group_column = "group", method = "DESeq2", formula = "~ group"))) %>% 
+  mutate(dds = map(DGEL, ~DESeq(.))) %>% 
+  mutate(BulkSoil_Endosphere = map(dds, ~lfcShrink(., contrast = c("group", "BulkSoil", "Endosphere")))) %>% 
+  mutate(BulkSoil_Rhizosphere = map(dds, ~lfcShrink(., contrast = c("group", "BulkSoil", "Rhizosphere")))) %>% 
+  dplyr::select(BulkSoil_Endosphere, BulkSoil_Rhizosphere) %>% 
+  gather(key = Comparison, value = results)
+
+DESeq2_example_results <- DESeq2_example %>% 
+  unnest(map(results, ~tidy(.)))
+
+DESeq2_example_results %>% 
+  tidyr::separate(Comparison, c("Comp1", "Comp2"), "_", remove = F) %>% 
+  mutate(direction = ifelse(estimate > 0, Comp1, Comp2)) %>% 
+  mutate(classification = ifelse(p.adjusted <= 0.05, direction, "ns")) %>% 
+  replace_na(list(classification = "ns")) %>% 
+  ggplot(aes(baseMean, estimate, color = classification, alpha = classification)) +
+  geom_point() +
+  facet_grid(.~Comparison) +
+  scale_x_log10() +
+  scale_color_manual(values = c("red", "steelblue", "grey50", "darkorchid3")) +
+  scale_alpha_manual(values = c(0.8, 0.8, 0.1, 0.8)) +
+  theme_minimal()
+```
+
+```{r}
+DESeq2_example_results %>% 
+  filter(Comparison == "BulkSoil_Rhizosphere" & p.adjusted <=0.05 & estimate > 0)
+
+mb_experiment %>% 
+  filter(variable == "113170") %>% 
+  ggplot(aes(Compartment, log2(RA + 1))) +
+  geom_boxplot()
+```
 
