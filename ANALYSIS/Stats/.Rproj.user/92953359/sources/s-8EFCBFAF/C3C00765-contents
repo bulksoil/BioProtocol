@@ -8,7 +8,7 @@ author: "Joseph Edwards"
 In this R notebook, we will be conducting an example analysis of microbiome data from the roots of plants. This is not a comprehensive analysis, but the workflow here gives a barebones structure for a typical analysis of amplicon data. If the reader has any questions or concerns, please contact Joseph Edwards at edwards@ucdavis.edu or Chistian Santos at cmsantosm@ucdavis.edu.
 
 ## Background on the data
-This data is derived from Santos-Medellín et al. 2017. In this paper, the authors inspect the microbiomes of various rice genotypes when exposed to drought in different soils. The OTU table for this particular tutorial was generated only from the well-watered plants in this study.
+This data is derived from Santos-Medellín et al. [Drought stress results in a compartment-specific restructuring of the rice root-associated microbiomes. *MBio*, 2017](http://mbio.asm.org/content/8/4/e00764-17.short). In this paper, the authors inspect the microbiomes of various rice genotypes when exposed to drought in different soils. The OTU table for this particular tutorial was generated only from the well-watered plants in this study.
 
 ## Required libraries
 Here we will be loading in the necessary libraries for the example analysis. The tidyverse contains the libraries ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, and forcats. The tidyMB package contains a bunch of useful wrapper functions to make microbiome analysis streamlined with a tidy workflow. The vegan package contains many tools essential for community (and microbial) ecology.
@@ -20,7 +20,7 @@ library(reshape2)
 ```
 
 ## Load in the data
-Here we will load in the OTU table, the mapping file (metadata), and the taxonomy table. The OTU table and mapping file are tab delimited files generated freshly for this analysis. The taxonomy table is a pre-compiled table that is in a ready-to-load R data structure. The OTU table was constructed using closed reference clustering. Therefore there was no need to assign taxonomies to the OTUs.
+Here we will load in the OTU table, the mapping file (metadata), and the taxonomy table. The OTU table and mapping file are tab delimited files generated freshly for this analysis. If the user would like to generate these files for themselves, please follow the instructions (here)[https://github.com/bulksoil/BioProtocol/blob/master/ANALYSIS/SeqProcessing/seq_processing.md]. The taxonomy table is a pre-compiled table that is in a ready-to-load R data structure. The OTU table was constructed using closed reference clustering. Therefore there was no need to assign taxonomies to the OTUs.
 ```{r}
 otu_table <- read.table("../../DATA/example_otu_table.tsv", sep = "\t", header = T, row.names = 1)
 map_table <- read_tsv("../../DATA/example_map.tsv")
