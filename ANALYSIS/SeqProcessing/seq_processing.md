@@ -4,12 +4,12 @@
 The first part of any microbiome analysis is download, demultiplex, clean, and cluster the data. Here, we will give some basic instructions on how to complete these tasks. 
 
 ## Before starting
-If you want to follow along with this tutorial, you will need to download a few things:
+If you want to follow along with this tutorial, you will need to download a few things
 	
-	- [BananaStand](https://github.com/bulksoil/BananaStand) is a pipeline and wrapper for conducting many of the steps involved in the up-front sequence processing.
-	- [PANDAseq](https://github.com/neufeld/pandaseq) is used by BananaStand to merge paired end amplicons into contiguous sequences.
-	- [NINJA-OPS](https://github.com/GabeAl/NINJA-OPS) is the OTU calling pipeline used to quickly cluster sequences.
-	- [BIOM Format](http://biom-format.org/) is the output format of the OTU table from NINJA-OPS. You will eventually need to convert it to a .tsv file
+-[BananaStand](https://github.com/bulksoil/BananaStand) is a pipeline and wrapper for conducting many of the steps involved in the up-front sequence processing.
+- [PANDAseq](https://github.com/neufeld/pandaseq) is used by BananaStand to merge paired end amplicons into contiguous sequences.
+- [NINJA-OPS](https://github.com/GabeAl/NINJA-OPS) is the OTU calling pipeline used to quickly cluster sequences.
+- [BIOM Format](http://biom-format.org/) is the output format of the OTU table from NINJA-OPS. You will eventually need to convert it to a .tsv file
 
 Visit the homepages for each of these packages/software and follow their installation instructions. If you have any problems installing BananaStand please contact Joe Edwards at edwards@ucdavis.edu.
 
