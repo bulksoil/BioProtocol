@@ -38,6 +38,20 @@ mb_experiment <- melt(cbind(map_table, t(otu_table)), id.vars = names(map_table)
   inner_join(tax_table, by = "variable")
 ```
 
+### Distribution of sequencing depth
+It's a good idea to first look at the distribution of sampling depth in each sample type. Sometimes samples are not well represented in the sequencing and should be removed before further analysis. 
+```{r}
+mb_experiment %>% 
+  group_by(SampleID, Compartment) %>% 
+  summarise(Depth = sum(value)) %>% 
+  ggplot(aes(Depth, fill = Compartment)) +
+  geom_histogram() +
+  scale_fill_manual(values = c("#E41A1C", "#377EB8", "#984EA3")) +
+  theme_minimal() +
+  facet_grid(.~Compartment)
+```
+Here, it appears that all the samples are fine.
+
 ### Identify and remove plastid and mitochondria OTUs and define a column for sequencing depth
 ```{r}
 mb_experiment <- mb_experiment %>% 
@@ -97,7 +111,7 @@ pc_plot <- exp_pc$axes %>%
   labs(x = paste("PCo1 (", round(exp_pc$eigen_vals[1], 3)*100, "%)", sep = ""),
        y = paste("PCo2 (", round(exp_pc$eigen_vals[2], 3)*100, "%)", sep = "")) +
   theme_minimal() +
-  scale_color_manual(values = c(c("#E41A1C", "#377EB8", "#984EA3"))) +
+  scale_color_manual(values = c("#E41A1C", "#377EB8", "#984EA3")) +
   theme(text = element_text(size = 12), legend.position = "none")
 
 pc_plot
@@ -225,11 +239,15 @@ MA_plot
 ```
 In this plot we can see that very few of the microbes in the bulk soil are depleted from the rhizosphere. It appears that rhizosphere has an enrichment role rather than a depletion role. In the endosphere, we see many OTUs which are enriched compared to the bulk soil and many bulk soil OTUs which are depleted. This makes sense as the endosphere is a nutrient rich niche that has many physical and host-associated barriers for colonization.
 
+## Conclusion
+Here we have presented a small introduction to plant root microbiome data analysis generated from 16S rRNA gene sequencing. This is by no means a comprehensive workflow, but it can serve as a good introduction to microbiome data analysis for a user with little experience. We have emphasized the use of tidy tools in order to make the code more readable (and hopefully easier to reproduce). We hope that the reader has come away with several points.
 
-```{r}
-library(gridExtra)
-grid.arrange(pc_plot, adiv_plot, phy_plot, MA_plot)
-```
+1. Do not reinvent the wheel
+    + Use the packages that already exist in order to maximize reproducibilty and minimize mistakes
+2. Drawn on approaches that have been used across disciplines
+    + DESeq2 was not designed for microbiome studies, but it works quite well microbiome purposes. Other approaches designed for other fields can also work for microbiome analysis.
+3. Use a tidy workflow
+    + This will ensure that the code is compact, cleaner, and easier to read than alternative methods.
 
 
 
