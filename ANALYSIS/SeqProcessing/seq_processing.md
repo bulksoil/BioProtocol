@@ -83,7 +83,9 @@ This should only a take a minute or two. After it is finished, navigate inside t
 biom convert -i ninja_otutable.biom -o example_otu_table.tsv --to-tsv
 ```
 
-After completing this step, the last thing is to manually edit the very first character out of the file. After this conversion, the header in this file begins with a `#`. This will confuse R when loading the file in, so go ahead and delete this character and save the file.
+After completing this step, the last thing is to manually edit the very first character out of the file. After converting the file from biom to tsv format, the header begins with a `#`. This will confuse R when loading the file in, so go ahead and delete this character and save the file. 
+
+Now the data is ready to be loaded into R. For the tutorial on how to process the data in R, please click [here](https://github.com/bulksoil/BioProtocol/blob/master/ANALYSIS/Stats/MicrobiomeAnalysis.rmd).
 
 
 
