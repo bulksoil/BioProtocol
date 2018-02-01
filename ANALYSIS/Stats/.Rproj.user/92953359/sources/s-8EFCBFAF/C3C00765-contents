@@ -81,16 +81,19 @@ mb_experiment <- mb_experiment %>%
 
 
 ## Beta Diversity
+One of the first things microbial ecologists do when they finally have their data cleaned up and in a managable format is to identify the obvious underlying patterns using principal coordinate analysis. Here we will use the convenient tidy_pcoa wrapper function from the tidyMB package to perform a PCoA using a Bray-Curtis dissimilary metric between the samples.
 ```{r}
 exp_pc <- tidy_pcoa(mb_experiment %>% 
                       mutate(logRA = log2(RA + 1)) %>% 
-                      select(SampleID, Tub, Compartment, Soil, Genotype, variable, RA, logRA), value = "logRA")
+                      select(SampleID, Tub, Compartment, Soil, Genotype, variable, RA, logRA), 
+                    value = "logRA", dist = "bray")
 ```
 
+Plot it out
 ```{r}
 pc_plot <- exp_pc$axes %>% 
   ggplot(aes(MDS1, MDS2, color = Compartment)) +
-  geom_point(size = 5) +
+  geom_point(size = 3, alpha = 0.8) +
   labs(x = paste("PCo1 (", round(exp_pc$eigen_vals[1], 3)*100, "%)", sep = ""),
        y = paste("PCo2 (", round(exp_pc$eigen_vals[2], 3)*100, "%)", sep = "")) +
   theme_minimal() +
@@ -99,15 +102,22 @@ pc_plot <- exp_pc$axes %>%
 
 pc_plot
 ```
+From the results, we can see that the bulk soil and rhizosphere have very similar communities while the endosphere is very different from both of these compartments. Further analysis will tell us which phyla and OTUs differ between the compartments and how diverse each community is.
 
 ## Alpha Diversity
+Alpha diversity is a measure of how diverse any given sample is (i.e. how many microbes are in the sample or how even are their distributions?). There are a few different measures of alpha diversity and the results can be different depending on the metric. 
+
+Here, we will produce two measures of alpha diversity - species richness and Shannon's entropy. Species richness is simply counting how many different units are detected within a sample. Shannon's entropy requires that the abundances be in a percentage (rather than per mille) form.
 ```{r}
 mb_a_div <- mb_experiment %>% 
   group_by(SampleID, Compartment, Soil) %>% 
   mutate(RA = RA /1000) %>% 
   filter(value > 0) %>% 
   summarise(Richness = sum(value > 0), Shannon = -sum(log(RA) * RA))
+```
 
+Plot it out.
+```{r}
 adiv_plot <- mb_a_div %>% 
   ungroup() %>%
   mutate(Compartment = fct_relevel(Compartment, "BulkSoil", "Rhizosphere", "Endosphere")) %>% 
@@ -124,8 +134,12 @@ adiv_plot <- mb_a_div %>%
 
 adiv_plot
 ```
+Firstly, notice that the graphs have different scales on the y-axis but overall, the patterns look very similar. Species richness and Shannon entropy are measureing different things, but the conclusions drawn from these two techniques can be similar. Here we notice that the bulk soil and the rhizosphere have similar levels of diversity while the endosphere has a reduced diversity compared to the other two sample types. We infer this to mean that the endosphere is a niche that fewer of the microbes in the soil can reside in compared to the rhizosphere.
 
 ## Phylum Plots
+Perhaps the researcher wants to know the microbial patterns at a higher level than OTU. By looking at phylum level abundances, one can get a sense of how large the differences in community structures are between any given comparison.
+
+Each OTU in the dataset has taxonomic information assigned to it, so to begin, we will aggregate the counts for each phylum in each sample. Next, the chunk of code nests the data and sums up the total abundance for each detected phylum across the dataset. We filter the 10 most highly represent phyla and take a mean of their relative abundance across sample types.
 ```{r}
 phy_abundance <- mb_experiment %>% 
   group_by(SampleID, Phylum, SampleID, Compartment, Soil) %>% 
@@ -140,8 +154,11 @@ phy_abundance <- mb_experiment %>%
   summarise(mean_phy = mean(phy_total)) %>% 
   ungroup() %>% 
   mutate(Compartment = fct_relevel(Compartment, "BulkSoil", "Rhizosphere", "Endosphere"))
+```
 
-phy_abundance %>% 
+Plot it out
+```{r}
+phy_plot <- phy_abundance %>% 
   ggplot(aes(x = Compartment, mean_phy, fill = Phylum)) +
   geom_bar(stat = "identity") +
   scale_fill_brewer(palette = "Spectral") +
@@ -149,10 +166,16 @@ phy_abundance %>%
   theme_minimal() +
   labs(x = "", y = "Relative Abundance (‰)") +
   theme(axis.text.x = element_text(angle = 30, hjust = 1), text = element_text(size = 12))
+
+phy_plot
 ```
+Here we can see that there appear to be statistically different distributions of phyla in each compartment. In each tested soil the bulk soil and rhizopshere have a lower relative abundance of proteobacteria compared the endosphere, while the opposite distribution appears for Acidobacteria.
+
 
 ## Differential abundance analysis
-Here we will compare the microbiomes of the rhizosphere and endosphere to that of the bulk soil to see which OTUs are differentially abundant and describing the witnessed differences between the sample types. 
+Here we will compare the microbiomes of the rhizosphere and endosphere to that of the bulk soil to see which OTUs are differentially abundant and describing the witnessed differences between the sample types. For this particular example we will be using DESeq2 to identify the OTUs which prefer one compartment compared to another. Again, this will be done using a tidy framework in order to prevent the creation of excessive dataframes. Essential to this approach are the tidyMB and biobroom packages. 
+
+In the chunk of code below, we filter for OTUs which are represented in 10% or more samples and next load the data into an object useful for the DESeq2 package (using the tidyDGEL function). Because we are interested in understanding which OTUs are differentially abunant between the compartments, our grouping variable is the Compartment column. The DESeq command will then run all of the processes in the DESeq2 workflow. Finally, lfcShrink identify the OTUs differentially abundant between the levels provided in the contrasts. 
 ```{r}
 library(DESeq2)
 library(broom)
@@ -171,31 +194,42 @@ DESeq2_example <- mb_experiment %>%
   mutate(BulkSoil_Rhizosphere = map(dds, ~lfcShrink(., contrast = c("group", "BulkSoil", "Rhizosphere")))) %>% 
   dplyr::select(BulkSoil_Endosphere, BulkSoil_Rhizosphere) %>% 
   gather(key = Comparison, value = results)
+```
 
+Because the resulting object is nested, we will go ahead and unnest it to look at the results. We can then classify those OTUs which are differentially abundant in some scenario (adjusted P value <= 0.05) as being enriched in one compartment compared to another.
+```{r}
 DESeq2_example_results <- DESeq2_example %>% 
-  unnest(map(results, ~tidy(.)))
-
-DESeq2_example_results %>% 
+  unnest(map(results, ~tidy(.))) %>% 
   tidyr::separate(Comparison, c("Comp1", "Comp2"), "_", remove = F) %>% 
   mutate(direction = ifelse(estimate > 0, Comp1, Comp2)) %>% 
   mutate(classification = ifelse(p.adjusted <= 0.05, direction, "ns")) %>% 
   replace_na(list(classification = "ns")) %>% 
+  mutate(Comparison = gsub("Soil_", " Soil vs. ", Comparison)) %>% 
+  mutate(Comparison = fct_relevel(Comparison, "Bulk Soil vs. Rhizosphere", "Bulk Soil vs. Endosphere"))
+```
+
+There are many things that one can do with this dataset. One of the most common ways of visualizing patterns is to make a MA plot with the mean abundance on the x-axis and the log-fold change between the two compartments on the y-axis. Each point represents one OTU and its color represents whethere the OTU was differentially abundant.
+```{r}
+MA_plot <- DESeq2_example_results %>% 
   ggplot(aes(baseMean, estimate, color = classification, alpha = classification)) +
-  geom_point() +
+  geom_point(size = 1) +
   facet_grid(.~Comparison) +
   scale_x_log10() +
-  scale_color_manual(values = c("red", "steelblue", "grey50", "darkorchid3")) +
+  scale_color_manual(values = c("red", "steelblue", "grey30", "#984EA3")) +
   scale_alpha_manual(values = c(0.8, 0.8, 0.1, 0.8)) +
-  theme_minimal()
+  labs(x = "Mean abundance (log10)", y = "Log Fold Change") + 
+  theme_minimal() +
+  theme(text = element_text(size = 12), legend.position = "none")
+
+MA_plot
 ```
+In this plot we can see that very few of the microbes in the bulk soil are depleted from the rhizosphere. It appears that rhizosphere has an enrichment role rather than a depletion role. In the endosphere, we see many OTUs which are enriched compared to the bulk soil and many bulk soil OTUs which are depleted. This makes sense as the endosphere is a nutrient rich niche that has many physical and host-associated barriers for colonization.
+
 
 ```{r}
-DESeq2_example_results %>% 
-  filter(Comparison == "BulkSoil_Rhizosphere" & p.adjusted <=0.05 & estimate > 0)
-
-mb_experiment %>% 
-  filter(variable == "113170") %>% 
-  ggplot(aes(Compartment, log2(RA + 1))) +
-  geom_boxplot()
+library(gridExtra)
+grid.arrange(pc_plot, adiv_plot, phy_plot, MA_plot)
 ```
+
+
 

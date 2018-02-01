@@ -1,8 +1,0 @@
-"0","mb_experiment <- mb_experiment %>% 
-  group_by(variable) %>% 
-  mutate(prev = sum(value > 0) / n()) %>% 
-  mutate(RA = (value / Depth) * 1000)
-"
-"2","Error in mutate_impl(.data, dots) : 
-  Evaluation error: object 'Depth' not found.
-"
