@@ -20,7 +20,7 @@ library(reshape2)
 ```
 
 ## Load in the data
-Here we will load in the OTU table, the mapping file (metadata), and the taxonomy table. The OTU table and mapping file are tab delimited files generated freshly for this analysis. If the user would like to generate these files for themselves, please follow the instructions (here)[https://github.com/bulksoil/BioProtocol/blob/master/ANALYSIS/SeqProcessing/seq_processing.md]. The taxonomy table is a pre-compiled table that is in a ready-to-load R data structure. The OTU table was constructed using closed reference clustering. Therefore there was no need to assign taxonomies to the OTUs.
+Here we will load in the OTU table, the mapping file (metadata), and the taxonomy table. The OTU table and mapping file are tab delimited files generated freshly for this analysis. If the user would like to generate these files for themselves, please follow the instructions [here](https://github.com/bulksoil/BioProtocol/blob/master/ANALYSIS/SeqProcessing/seq_processing.md). The taxonomy table is a pre-compiled table that is in a ready-to-load R data structure. The OTU table was constructed using closed reference clustering. Therefore there was no need to assign taxonomies to the OTUs.
 ```{r}
 otu_table <- read.table("../../DATA/example_otu_table.tsv", sep = "\t", header = T, row.names = 1)
 map_table <- read_tsv("../../DATA/example_map.tsv")
