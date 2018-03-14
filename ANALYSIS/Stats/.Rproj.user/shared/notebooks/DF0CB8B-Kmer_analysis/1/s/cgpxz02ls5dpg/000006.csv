@@ -1,0 +1,24 @@
+"0","p
+"
+"2","No trace type specified:
+  Based on info supplied, a 'scatter3d' trace seems appropriate.
+  Read more about this trace type -> https://plot.ly/r/reference/#scatter3d
+"
+"2","No scatter3d mode specifed:
+  Setting the mode to markers
+  Read more about this attribute -> https://plot.ly/r/reference/#scatter-mode
+"
+"2","n too large, allowed maximum for palette Set2 is 8
+Returning the palette you asked for with that many colors
+"
+"2","No trace type specified:
+  Based on info supplied, a 'scatter3d' trace seems appropriate.
+  Read more about this trace type -> https://plot.ly/r/reference/#scatter3d
+"
+"2","No scatter3d mode specifed:
+  Setting the mode to markers
+  Read more about this attribute -> https://plot.ly/r/reference/#scatter-mode
+"
+"2","n too large, allowed maximum for palette Set2 is 8
+Returning the palette you asked for with that many colors
+"

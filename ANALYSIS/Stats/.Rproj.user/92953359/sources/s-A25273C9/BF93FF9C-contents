@@ -1,0 +1,49 @@
+---
+title: "Kmer Analysis"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+```
+
+
+```{r}
+kmers4 <- read_tsv("~/Python_Projects/KmerTax/Data/full_k4.tsv", col_types = cols(OTU_ID = col_character()))
+kmers5 <- read_tsv("~/Python_Projects/KmerTax/Data/V4_K5.tsv", col_types = cols(OTU_ID = col_character()))
+kmers6 <- read_tsv("~/Python_Projects/KmerTax/Data/k6.tsv", col_types = cols(OTU_ID = col_character()))
+tax <- read_rds("~/RMB/Reference/gg_otus_tax.rds")
+tax <- tax[match(kmers4$OTU_ID, tax$variable),]
+```
+
+```{r}
+pc <- princomp(kmers6[,-1])
+pc_axes <- cbind(tax, pc$scores)
+phy_cent <- pc_axes %>% 
+  group_by(Phylum)
+
+pc_gg <- pc_axes %>% 
+  ggplot(aes(Comp.1, Comp.3, color = Phylum)) +
+  geom_point(size = 0.1, alpha = 0.3) +
+  theme_minimal() +
+  guides(colour = guide_legend(override.aes = list(alpha = 1)),
+         size = guide_legend(override.aes = list(size = 1))) +
+  theme(legend.position = "none")
+
+p <- plot_ly(pc_axes, x = ~Comp.1, y = ~Comp.2, z = ~Comp.3, color = ~Phylum, marker = list(size = 1)) 
+p
+```
+
+```{r}
+data.frame(Comp = names(pc$sdev), dev = pc$sdev) %>% 
+  mutate(Comp = as.numeric(gsub("Comp.", "", Comp))) %>% 
+  mutate(eig = dev^2, perc = eig/sum(eig)) %>% 
+  ggplot(aes(x = Comp, y = perc)) +
+  geom_bar(stat = "identity")
+
+```
+
+```{r}
+
+```
+
